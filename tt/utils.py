@@ -179,16 +179,41 @@ def read_wave_from_file(audio_file):
 
 def get_feature(wave_data, framerate, feature_dim=128):
     """
-    :param wave_data: 一维numpy,dtype=int16
-    :param framerate:
-    :param feature_dim:
-    :return: specgram [序列长度,特征维度]
+    Trích xuất FBANK features từ tín hiệu audio.
+    
+    :param wave_data: numpy array (dtype=int16) - Tín hiệu audio raw.
+    :param framerate: int - Tần số lấy mẫu (Hz).
+    :param feature_dim: int - Số bộ lọc Mel (số chiều đặc trưng).
+    :return: FBANK features [shape: (time, feature_dim)]
     """
+    # Chuẩn hóa dữ liệu âm thanh
     wave_data = wave_data.astype("float32")
-    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160, n_mels=feature_dim)
-    specgram = np.ma.log(specgram).T
-    specgram = specgram.filled(0)
-    return specgram
+    
+    # Tính STFT
+    stft = librosa.stft(wave_data, n_fft=512, hop_length=160, win_length=400, window='hann')
+    
+    # Tính năng lượng phổ
+    power_spec = np.abs(stft) ** 2
+    
+    # Tạo bộ lọc Mel
+    mel_filters = librosa.filters.mel(
+        sr=framerate,
+        n_fft=512,
+        n_mels=feature_dim,
+        fmin=0,
+        fmax=framerate // 2
+    )
+    
+    # Áp dụng bộ lọc Mel để có FBANK
+    fbank = np.dot(mel_filters, power_spec)
+    
+    # Thay thế giá trị 0 bằng epsilon để tránh log(0)
+    fbank = np.where(fbank == 0, np.finfo(float).eps, fbank)
+    
+    # Log energy (FBANK)
+    fbank = np.log(fbank).T  # Transpose để có shape (time, feature_dim)
+    
+    return fbank
 
 
 def get_feature2(wave_data, framerate, feature_dim=128):

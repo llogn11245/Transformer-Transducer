@@ -10,9 +10,7 @@ import torch.nn as nn
 import torch.utils.data
 import yaml
 from tensorboardX import SummaryWriter
-from warprnnt_pytorch import RNNTLoss
-
-from tt.dataset import AudioDataset
+from tt.dataset import AudioDataset, collate_fn
 from tt_espnet.model import TransformerTransducer
 from tt.optim import Optimizer
 from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer, dict_map, write_result
@@ -170,20 +168,25 @@ def main():
     index2word, word2index = generate_dictionary(config.data.vocab)
     logger.info('Load Vocabulary!')
 
-    # num_workers = config.training.num_gpu * config.data.batch_size
-    # num_workers = config.data.batch_size
     train_dataset = AudioDataset(config.data, 'train', word2index)
     training_data = torch.utils.data.DataLoader(
-        train_dataset, batch_size=config.data.batch_size,
-        # train_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
-        shuffle=config.data.shuffle, num_workers=12)
+        train_dataset, 
+        batch_size=config.data.batch_size,
+        shuffle=config.data.shuffle, 
+        num_workers=4, 
+        collate_fn=lambda batch: collate_fn(batch, pad_id=0)
+
+    )
     logger.info('Load Train Set!')
 
     dev_dataset = AudioDataset(config.data, 'dev', word2index)
     validate_data = torch.utils.data.DataLoader(
-        dev_dataset, batch_size=config.data.batch_size,
-        # dev_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
-        shuffle=False, num_workers=12)
+        dev_dataset, 
+        batch_size=config.data.batch_size,
+        shuffle=False, 
+        num_workers=4,
+        collate_fn=lambda batch: collate_fn(batch, pad_id=0)
+    )
     logger.info('Load Dev Set!')
 
     if config.training.num_gpu > 0:
@@ -230,9 +233,6 @@ def main():
     optimizer = Optimizer(model.parameters(), config.optim)
     logger.info('Created a %s optimizer.' % config.optim.type)
 
-    # criterion = RNNTLoss()
-    # logger.info('Created a RNNT loss.')
-
     if opt.mode == 'continue':
         optimizer.load_state_dict(checkpoint['optimizer'])
         start_epoch = checkpoint['epoch']
@@ -245,8 +245,8 @@ def main():
 
     for epoch in range(start_epoch, config.training.epochs):
 
-        # train(epoch, config, model, training_data,
-        #       optimizer, logger, visualizer)
+        train(epoch, config, model, training_data,
+              optimizer, logger, visualizer)
 
         save_name = os.path.join(exp_name, '%s.epoch%d.chkpt' % (config.training.save_model, epoch))
         save_model(model, optimizer, config, save_name)

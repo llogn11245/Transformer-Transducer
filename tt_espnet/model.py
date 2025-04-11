@@ -19,9 +19,9 @@ class TransformerTransducer(nn.Module):
     def __init__(self, config):
         super(TransformerTransducer, self).__init__()
         self.vocab_size = config.joint.vocab_size
-        self.sos = self.vocab_size - 1
-        self.eos = self.vocab_size - 1
-        self.ignore_id = -1
+        self.sos = config.data.sos_id
+        self.eos = config.data.eos_id
+        self.ignore_id = config.data.ignore_id
         self.encoder_left_mask = config.mask.encoder_left_mask
         self.encoder_right_mask = config.mask.encoder_right_mask
         self.decoder_left_mask = config.mask.decoder_left_mask
@@ -30,7 +30,7 @@ class TransformerTransducer(nn.Module):
         self.decoder = TransformerEncoder(**config.dec)
         self.joint = JointNetwork(**config.joint)
         self.loss = TransLoss(trans_type="warp-transducer",
-                              blank_id=0)  # todo: check blank id
+                              blank_id=config.data.blank_id)  # todo: check blank id
 
     def forward(self,
                 speech: torch.Tensor,

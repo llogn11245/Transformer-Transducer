@@ -150,18 +150,29 @@ def subsampling(features, subsample=3):
     return subsampled_features
 
 
+# def generate_dictionary(path):
+#     index2word = {}
+#     word2index = {}
+#     with open(path, 'r') as f:
+#         lines = f.readlines()
+#     for line in lines:
+#         word_index = str(line).strip().split(' ')
+#         index = word_index[1]
+#         index = int(index)
+#         word = word_index[0]
+#         index2word[index] = word
+#         word2index[word] = index
+#     return index2word, word2index
+
 def generate_dictionary(path):
     index2word = {}
     word2index = {}
     with open(path, 'r') as f:
         lines = f.readlines()
-    for line in lines:
-        word_index = str(line).strip().split(' ')
-        index = word_index[1]
-        index = int(index)
-        word = word_index[0]
-        index2word[index] = word
-        word2index[word] = index
+    for idx, line in enumerate(lines):
+        word = line.strip()
+        index2word[idx] = word
+        word2index[word] = idx
     return index2word, word2index
 
 
